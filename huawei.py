@@ -439,7 +439,7 @@ class HuaWei:
             countdownTimes = utils.calc_countdown_times(self.secKillTime,
                                                         self.localTimestamp - self.hwServerTimestamp)
 
-            if countdownMsDiff > 120000:
+            if countdownMsDiff > 60000:
                 logger.info("距离抢购开始还剩：{}", utils.format_countdown_time(countdownTimes))
                 time.sleep(5)
             else:
@@ -611,7 +611,8 @@ class HuaWei:
                                 logger.warning("检查是否可以进行下单操作，排队状态：【{}】", tipMsg)
                                 checkResult = 0
                                 break
-                            elif tipMsg == '当前排队人数过多，是否继续排队等待？':
+                            elif "是否继续" in tipMsg:
+                            # elif tipMsg == '当前排队人数过多，是否继续排队等待？':
                                 logger.warning("检查是否可以进行下单操作，排队状态：【{}】", tipMsg)
                                 checkResult = 0
                                 try:
