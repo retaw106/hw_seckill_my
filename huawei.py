@@ -3,6 +3,7 @@
 import json
 import locale
 import os.path
+import random
 import sys
 import threading
 import time
@@ -21,6 +22,14 @@ import utils
 from loguru import logger
 
 from huawei_thread import HuaWeiThread
+
+
+def is_sensitive_time():
+    cur_time = datetime.now()
+    cur_minute = cur_time.minute
+    if cur_minute in [58, 59, 0, 6, 7, 8, 28, 29, 30, 36, 37, 38]:
+        return True
+    return False
 
 
 class HuaWei:
@@ -77,8 +86,8 @@ class HuaWei:
         self.__login()
         if self.isLogin:
             self.__visit_product_page()
-            self.__waiting_count()
             self.__choose_product()
+            self.__waiting_count()
             self.__countdown()
             self.__start_buying()
             self.__buy_now()
@@ -372,13 +381,17 @@ class HuaWei:
                 if EC.text_to_be_present_in_element((By.CSS_SELECTOR, "#pro-operation > a"), "暂不售卖")(
                         self.browser):
                     logger.info("【{}】倒计时未开始，等待中...", "暂不售卖")
-                    time.sleep(120)
+                    time.sleep(240)
                     self.__refresh_product_page()
                 elif EC.text_to_be_present_in_element((By.CSS_SELECTOR, "#pro-operation > a"), "暂时缺货")(
                         self.browser):
                     logger.info("【{}】倒计时未开始，等待中...", "暂时缺货")
-                    time.sleep(120)
+                    if is_sensitive_time():
+                        time.sleep(20 + random.uniform(-5, 5))
+                    else:
+                        time.sleep(120 + random.uniform(-5, 5))
                     self.__refresh_product_page()
+                    self.__choose_product()
                 elif EC.text_to_be_present_in_element((By.CSS_SELECTOR, "#pro-operation > a"), "即将开始")(
                         self.browser):
                     logger.info("倒计时即将开始")
@@ -421,6 +434,9 @@ class HuaWei:
     def __choose_product_item(self):
         logger.info("开始选择手机单品规格")
         sku_color = self.config.get("product", "color")
+        if ',' in sku_color:
+            colors = sku_color.split(',')
+            sku_color = colors[random.randrange(len(colors))]
         sku_version = self.config.get("product", "version")
         self.driverWait.until(EC.presence_of_element_located((By.LINK_TEXT, f"{sku_color}"))).click()
         self.driverWait.until(EC.presence_of_element_located((By.LINK_TEXT, f"{sku_version}"))).click()
@@ -462,7 +478,7 @@ class HuaWei:
                 time.sleep(0.1)
             elif countdownMsDiff > 10:
                 logger.info("距离抢购活动最后下单环节开始还剩：{}", utils.format_countdown_time(countdown_times))
-                time.sleep(0.01)
+                time.sleep(0.009)
             else:
                 logger.info("抢购活动最后下单环节，进行第 {} 次尝试立即下单", clickTimes)
                 self.__do_start_buying()
@@ -597,7 +613,8 @@ class HuaWei:
             logger.info("检查是否可以进行下单操作")
             self.__check_box_ct_pop_stage()
             self.__get_current_page_type()
-            isOrderSubmitPage = EC.url_contains("www.vmall.com/order/nowConfirmcart")(self.browser)
+            isOrderSubmitPage = (EC.url_contains("www.vmall.com/order/nowConfirmcart")(self.browser) or
+                EC.url_contains("www.vmall.com/order/rush/confirm")(self.browser))
             checkResult = 1
             if not isOrderSubmitPage:
                 iframeBoxExists = self.__check_iframe_box_pop_exists()

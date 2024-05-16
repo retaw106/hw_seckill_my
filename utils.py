@@ -53,12 +53,16 @@ def timestamp2time(timestamp):
 
 
 def calc_countdown_ms_diff(targetDatetime, msDiff):
+    if targetDatetime is None:
+        return 0
     localTimestamp = get_local_timestamp() - msDiff
     targetTimestamp = math.floor(targetDatetime.timestamp() * 1000)
     return targetTimestamp - localTimestamp
 
 
 def calc_countdown_times(targetDatetime, msDiff):
+    if targetDatetime is None:
+        return 0
     localTimestamp = get_local_timestamp() - msDiff
     targetTimestamp = math.floor(targetDatetime.timestamp() * 1000)
     originTimestampDiff = (targetTimestamp - localTimestamp) / 1000
