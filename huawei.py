@@ -389,7 +389,7 @@ class HuaWei:
                     if is_sensitive_time():
                         time.sleep(20 + random.uniform(-5, 5))
                     else:
-                        time.sleep(120 + random.uniform(-5, 5))
+                        time.sleep(60 + random.uniform(-5, 5))
                     self.__refresh_product_page()
                     self.__choose_product()
                 elif EC.text_to_be_present_in_element((By.CSS_SELECTOR, "#pro-operation > a"), "即将开始")(
@@ -438,8 +438,8 @@ class HuaWei:
             colors = sku_color.split(',')
             sku_color = colors[random.randrange(len(colors))]
         sku_version = self.config.get("product", "version")
-        self.driverWait.until(EC.presence_of_element_located((By.LINK_TEXT, f"{sku_color}"))).click()
         self.driverWait.until(EC.presence_of_element_located((By.LINK_TEXT, f"{sku_version}"))).click()
+        self.driverWait.until(EC.presence_of_element_located((By.LINK_TEXT, f"{sku_color}"))).click()
         sku_payment = '无'
         if EC.text_to_be_present_in_element((By.CSS_SELECTOR, "#pro-skus > dl:last-child > label"), "选择销售类型")(
                 self.browser):
