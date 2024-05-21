@@ -381,8 +381,9 @@ class HuaWei:
                 if EC.text_to_be_present_in_element((By.CSS_SELECTOR, "#pro-operation > a"), "暂不售卖")(
                         self.browser):
                     logger.info("【{}】倒计时未开始，等待中...", "暂不售卖")
-                    time.sleep(240)
+                    time.sleep(60 + random.uniform(-5, 5))
                     self.__refresh_product_page()
+                    self.__choose_product()
                 elif EC.text_to_be_present_in_element((By.CSS_SELECTOR, "#pro-operation > a"), "暂时缺货")(
                         self.browser):
                     logger.info("【{}】倒计时未开始，等待中...", "暂时缺货")
@@ -558,6 +559,8 @@ class HuaWei:
         productIsNotBuy = False
         try:
             activity_text = self.browser.find_element(By.CSS_SELECTOR, ".box-ct .box-cc .box-content").text
+            if activity_text == '':
+                activity_text = self.browser.find_element(By.CSS_SELECTOR, "#show_risk_msg_box .box-cc .box-content").text
             productIsNotBuy = activity_text.find('抱歉，没有抢到') != -1
         except (NoSuchElementException, StaleElementReferenceException):
             pass
@@ -565,12 +568,26 @@ class HuaWei:
         if productIsNotBuy:
             logger.warning("抱歉，没有抢到，再试试")
             try:
-                buttons = self.browser.find_elements(By.CSS_SELECTOR,
-                                                     '.box-ct .box-cc .box-content .box-button .box-ok')
-                for button in buttons:
-                    if '再试试' == button.text:
-                        button.click()
-                        self.isStartBuying = True
+                if random.randrange(5) > 0:
+                    buttons = self.browser.find_elements(By.CSS_SELECTOR,
+                                                         '.box-ct .box-cc .box-content .box-button .box-ok')
+                    if not buttons:
+                        buttons = self.browser.find_elements(By.CSS_SELECTOR,
+                                                             '#show_risk_msg_box .box-cc .box-button .box-ok')
+                    for button in buttons:
+                        if '再试试' == button.text:
+                            button.click()
+                            self.isStartBuying = True
+                else:
+                    buttons = self.browser.find_elements(By.CSS_SELECTOR,
+                                                         '.box-ct .box-cc .box-content .box-button .box-cancel')
+                    if not buttons:
+                        buttons = self.browser.find_elements(By.CSS_SELECTOR,
+                                                             '#show_risk_msg_box .box-cc .box-button .box-cancel')
+                    for button in buttons:
+                        if '返回' == button.text:
+                            button.click()
+                            self.isStartBuying = False
             except (NoSuchElementException, ElementClickInterceptedException, StaleElementReferenceException) as e:
                 logger.error("抱歉，没有抢到，再试试按钮未找到：except: {} ", e)
                 pass
@@ -633,15 +650,26 @@ class HuaWei:
                                 logger.warning("检查是否可以进行下单操作，排队状态：【{}】", tipMsg)
                                 checkResult = 0
                                 try:
-                                    buttons = self.browser.find_elements(By.CSS_SELECTOR,
-                                                                         '.ecWeb-queue .queue-btn .btn-ok')
-                                    waitBtn = None
-                                    for button in buttons:
-                                        if '继续等待' == button.text:
-                                            waitBtn = button
+                                    if random.randrange(4) > 0:
+                                        buttons = self.browser.find_elements(By.CSS_SELECTOR,
+                                                                             '.ecWeb-queue .queue-btn .btn-cancel')
+                                        waitBtn = None
+                                        for button in buttons:
+                                            if '继续等待' == button.text:
+                                                waitBtn = button
 
-                                    if waitBtn is not None:
-                                        waitBtn.click()
+                                        if waitBtn is not None:
+                                            waitBtn.click()
+                                    else:
+                                        buttons = self.browser.find_elements(By.CSS_SELECTOR,
+                                                                             '.ecWeb-queue .queue-btn .btn-ok')
+                                        waitBtn = None
+                                        for button in buttons:
+                                            if '返回' == button.text:
+                                                waitBtn = button
+
+                                        if waitBtn is not None:
+                                            waitBtn.click()
                                 except (NoSuchElementException, ElementClickInterceptedException,
                                         StaleElementReferenceException) as e:
                                     logger.error("检查是否可以进行下单操作，继续等待按钮未找到：except: {}", e)
@@ -732,6 +760,17 @@ class HuaWei:
                 pass
         except NoSuchElementException as noe:
             logger.error("点击提交订单异常，提交订单按钮不存在； except: {}", noe)
+            try:
+                iframe = self.browser.find_element(By.CSS_SELECTOR, '#iframeBox #queueIframe')
+                self.browser.switch_to.frame(iframe)
+                buttons = self.browser.find_elements(By.CSS_SELECTOR, '.ecWeb-queue .queue-btn .btn-cancel')
+                for button in buttons:
+                    if '取消排队' == button.text:
+                        button.click()
+                        break
+                self.browser.switch_to.default_content()
+            except NoSuchElementException:
+                pass
         except ElementClickInterceptedException as cie:
             logger.error("点击提交订单异常，提交订单按钮不可点击； except: {}", cie)
         except StaleElementReferenceException as sre:
@@ -764,7 +803,8 @@ class HuaWei:
             pageType = 'login'
         elif currentUrl.find("www.vmall.com/product/{0}.html".format(self.config.get("product", "id", ""))) != -1:
             pageType = 'product'
-        elif currentUrl.find("www.vmall.com/order/nowConfirmcart") != -1:
+        elif currentUrl.find("www.vmall.com/order/nowConfirmcart") != -1 or \
+                currentUrl.find("www.vmall.com/order/rush/confirm") != 1:
             pageType = 'order'
         elif currentUrl.find("payment.vmall.com/cashier/web/pcIndex.htm") != -1:
             pageType = 'payment'
